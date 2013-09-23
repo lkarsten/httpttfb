@@ -19,6 +19,7 @@ screw up any serious measurements attempts.
 Estimated response time values are <0.5ms.
 
 * ``make`` to compile.
+* ``apt-get install python-numpy`` (for postprocessing)
 * ``./measure 8080`` to run and output results.
 
 Results are output to stdout. Measurement data is kept around in case you
