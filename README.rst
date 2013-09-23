@@ -16,7 +16,7 @@ Usage
 Run this against a web server on your local machine. Network latency will
 screw up any serious measurements attempts.
 
-Estimated response time values are are <0.5ms.
+Estimated response time values are <0.5ms.
 
 * ``make`` to compile.
 * ``./measure 8080`` to run and output results.
