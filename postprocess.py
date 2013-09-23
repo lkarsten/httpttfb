@@ -5,6 +5,7 @@ import sys
 import pandas as pd
 import numpy as np
 
+from glob import glob
 #import scipy.stats
 
 def reject_outliers(data, m = 2.):
@@ -20,17 +21,12 @@ def oneline(data):
         np.median(data)*1000*1000)
 
 def run_dataset(input):
-
-    data1 = np.loadtxt(input + ".1", delimiter='\n')
-    data2 = np.loadtxt(input + ".2", delimiter='\n')
+    for dataset in glob(input + ".?"):
+        data = np.loadtxt(dataset, delimiter='\n')
+        data = reject_outliers(data)
+        oneline(data)
 
     #_t, _p = scipy.stats.wilcoxon(data1, data2)
-
-    data1 = reject_outliers(data1)
-    data2 = reject_outliers(data2)
-
-    oneline(data1)
-    oneline(data2)
     #print "p-value: %f" % _p
 
 
@@ -42,7 +38,7 @@ if __name__ == "__main__":
         if inputfile.endswith("."):
             inputfile = inputfile[:-1]
         print inputfile
-        print "==="*10
+        print "==="*8
         run_dataset(inputfile)
         print
 

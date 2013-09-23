@@ -1,14 +1,13 @@
 #!/bin/bash
 
-#HOST=localhost
+HOST=localhost
 #PORT=8080
-
-HOST=$1
-PORT=$2
+PORT=$1
 
 # n>20 for wilcoxon
 RUNS=100
-OUTPUT="tmp.$1$2.$RANDOM"
+
+OUTPUT="tmp.${HOST}__$PORT.$RANDOM"
 set -e
 
 # throwaway, get into steady state
@@ -18,6 +17,11 @@ set -e
 ./httpttfb $HOST $PORT $RUNS >> $OUTPUT.1
 sleep 2
 ./httpttfb $HOST $PORT $RUNS >> $OUTPUT.2
-
+sleep 2
+./httpttfb $HOST $PORT $RUNS >> $OUTPUT.3
+sleep 2
+./httpttfb $HOST $PORT $RUNS >> $OUTPUT.4
+sleep 2
+./httpttfb $HOST $PORT $RUNS >> $OUTPUT.5
 
 ./postprocess.py $OUTPUT
