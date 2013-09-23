@@ -1,3 +1,4 @@
+CC=clang
 
 httpttfb: httpttfb.c
-	clang -Wall -lrt -o httpttfb httpttfb.c
+	$(CC) -Wall -o httpttfb httpttfb.c -lrt
