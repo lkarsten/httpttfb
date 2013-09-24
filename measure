@@ -19,8 +19,10 @@ echo -n "(dry run) "
 for i in 1 2 3 4 5; do
     ./httpttfb $HOST $PORT $RUNS >> $OUTPUT.$i
     echo -n "$i "
-    sleep 2
+    sleep 1
 done
 
 echo "done"
 ./postprocess.py $OUTPUT
+rm $OUTPUT.?
+
