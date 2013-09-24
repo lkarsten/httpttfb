@@ -16,7 +16,7 @@ def reject_outliers(data, m = 2.):
     return data[s<m]
 
 def oneline(data):
-    print "mean: %7.3fμs (stdev %5.3fμs) median: %7.3fμs" % \
+    print "mean: %7.3fμs (stdev %6.3fμs) median: %7.3fμs" % \
         (data.mean() * 1000.*1000,
         data.std() * 1000.*1000,
         np.median(data)*1000*1000)
