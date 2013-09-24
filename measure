@@ -10,18 +10,17 @@ RUNS=100
 OUTPUT="tmp.${HOST}__$PORT.$RANDOM"
 set -e
 
+echo -n "Measuring..."
+
 # throwaway, get into steady state
 ./httpttfb $HOST $PORT $RUNS 1>/dev/null
-
+echo -n "(dry run) " 
 # proper measurement runs
-./httpttfb $HOST $PORT $RUNS >> $OUTPUT.1
-sleep 2
-./httpttfb $HOST $PORT $RUNS >> $OUTPUT.2
-sleep 2
-./httpttfb $HOST $PORT $RUNS >> $OUTPUT.3
-sleep 2
-./httpttfb $HOST $PORT $RUNS >> $OUTPUT.4
-sleep 2
-./httpttfb $HOST $PORT $RUNS >> $OUTPUT.5
+for i in 1 2 3 4 5; do
+    ./httpttfb $HOST $PORT $RUNS >> $OUTPUT.$i
+    echo -n "$i "
+    sleep 2
+done
 
+echo "done"
 ./postprocess.py $OUTPUT
