@@ -31,7 +31,7 @@ Author: Lasse Karstensen <lkarsten@varnish-software.com>, September 2013.
 
 int main(int argc, char *argv[]) {
 	const char req[] = \
-		"GET / HTTP/1.1\nHost: localhost\nAccept-Encoding: gzip\r\n";
+		"GET / HTTP/1.1\r\nHost: localhost\nAccept-Encoding: gzip\r\n\r\n";
 	struct addrinfo hints;
 	struct addrinfo *result, *rp;
 
