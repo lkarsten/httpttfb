@@ -28,20 +28,67 @@ Author: Lasse Karstensen <lkarsten@varnish-software.com>, September 2013.
     }                                                                \
   } while (0)
 
+const char req[] = \
+	"GET / HTTP/1.1\r\nHost: localhost\nAccept-Encoding: gzip\r\n\r\n";
 
-int main(int argc, char *argv[]) {
-	const char req[] = \
-		"GET / HTTP/1.1\r\nHost: localhost\nAccept-Encoding: gzip\r\n\r\n";
-	struct addrinfo hints;
-	struct addrinfo *result, *rp;
+
+/*
+ *  Run `runs` requests against an addrinfo `dest` (-ination) and
+ *  write timing information to stdout.
+*/
+int do_run(struct addrinfo * dest, int runs) {
+	int sockfd, i;
 
 	struct timespec t1, t2;
 	struct timespec delta;
 
 	char buf[128] = "";
 
-	int sockfd, s, i, runs;
 	ssize_t r;
+
+	for (i=0; i < runs; i++) {
+		sockfd = socket(dest->ai_family, dest->ai_socktype, dest->ai_protocol);
+
+		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t1) != 0) {
+			perror("clock");
+		}
+
+		r = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
+		if (r < 0) {
+			fprintf(stderr, "%s\n", strerror(errno));
+			close(sockfd);
+			exit(EXIT_FAILURE);
+		}
+
+		write(sockfd, req, sizeof req);
+		r = read(sockfd, &buf, 1);
+
+		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t2) != 0) {
+			perror("clock");
+		}
+		// printf("%s", buf);
+
+		if (!r) {
+			fprintf(stderr, "read error: %s\n", strerror(errno));
+			printf("NaN\n");
+		} else {
+			timersub(t2, t1, delta);
+			printf("%lld.%.9ld\n", (long long)delta.tv_sec, delta.tv_nsec);
+		}
+		close(sockfd);
+	}
+	return(0);
+}
+
+
+
+int main(int argc, char *argv[]) {
+	struct addrinfo hints;
+	struct addrinfo *result;
+
+	int s, runs;
+
+	printf(req);
 
 	if (argc < 4) {
 	   fprintf(stderr, "Usage: %s <host> <port> <runs>\n", argv[0]);
@@ -60,32 +107,11 @@ int main(int argc, char *argv[]) {
 	   exit(EXIT_FAILURE);
 	}
 
-	rp = result; // use the first.
+	// use the first result returned by getaddrinfo.
+	do_run(result, runs);
 
-	for (i=0; i<runs; i++) {
-		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t1) != 0) { perror("clock"); }
-		r = connect(sockfd, rp->ai_addr, rp->ai_addrlen);
-		if (r < 0) {
-			fprintf(stderr, "%s\n", strerror(errno));
-			close(sockfd);
-			exit(EXIT_FAILURE);
-		}
-
-		write(sockfd, req, sizeof req);
-		r = read(sockfd, &buf, 1);
-		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t2) != 0) {
-			perror("clock");
-		}
-		// printf("%s", buf);
-		if (!r) {
-			fprintf(stderr, "read error: %s\n", strerror(errno));
-			printf("NaN\n");
-		} else {
-			timersub(t2, t1, delta);
-			printf("%lld.%.9ld\n", (long long)delta.tv_sec, delta.tv_nsec);
-		}
-		close(sockfd);
-	}
+	freeaddrinfo(result);
 	return(EXIT_SUCCESS);
 }
+
+
