@@ -31,6 +31,7 @@ Author: Lasse Karstensen <lkarsten@varnish-software.com>, September 2013.
 const char req[] = \
 	"GET / HTTP/1.1\r\nHost: localhost\nAccept-Encoding: gzip\r\n\r\n";
 
+#define USE_TCP_FASTOPEN 1
 
 /*
  *  Run `runs` requests against an addrinfo `dest` (-ination) and
@@ -52,15 +53,23 @@ int do_run(struct addrinfo * dest, int runs) {
 		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t1) != 0) {
 			perror("clock");
 		}
-
+#ifdef USE_TCP_FASTOPEN
+		r = sendto(sockfd, req, sizeof req, MSG_FASTOPEN, dest->ai_addr, dest->ai_addrlen);
+		if (r < 0) {
+			fprintf(stderr, "%s\n", strerror(errno));
+			close(sockfd);
+			exit(EXIT_FAILURE);
+		}
+#else
 		r = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
 		if (r < 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			close(sockfd);
 			exit(EXIT_FAILURE);
 		}
-
 		write(sockfd, req, sizeof req);
+#endif
+
 		r = read(sockfd, &buf, 1);
 
 		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t2) != 0) {
