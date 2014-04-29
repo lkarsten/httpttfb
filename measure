@@ -1,8 +1,7 @@
 #!/bin/bash
 
 HOST=localhost
-#PORT=8080
-PORT=$1
+PORT=6081
 
 # n>20 for wilcoxon
 RUNS=100
@@ -14,15 +13,15 @@ echo -n "Measuring..."
 
 # throwaway, get into steady state
 ./httpttfb $HOST $PORT $RUNS 1>/dev/null
-echo -n "(dry run) " 
+echo -n "(dry run) "
 # proper measurement runs
 for i in 1 2 3 4 5; do
-    ./httpttfb $HOST $PORT $RUNS >> $OUTPUT.$i
+    ./httpttfb $HOST $PORT $RUNS >> $OUTPUT
     echo -n "$i "
     sleep 1
 done
 
 echo "done"
-./postprocess.py $OUTPUT
-rm $OUTPUT.?
+./postprocess.py < $OUTPUT
+rm $OUTPUT
 
