@@ -10,6 +10,7 @@ Author: Lasse Karstensen <lkarsten@varnish-software.com>, September 2013.
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/utsname.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -31,13 +32,11 @@ Author: Lasse Karstensen <lkarsten@varnish-software.com>, September 2013.
 const char req[] = \
 	"GET / HTTP/1.1\r\nHost: localhost\nAccept-Encoding: gzip\r\n\r\n";
 
-#define USE_TCP_FASTOPEN 1
-
 /*
  *  Run `runs` requests against an addrinfo `dest` (-ination) and
  *  write timing information to stdout.
 */
-int do_run(struct addrinfo * dest, int runs) {
+int do_run(struct addrinfo * dest, int runs, int enable_fastopen) {
 	int sockfd, i;
 
 	struct timespec t1, t2;
@@ -53,22 +52,23 @@ int do_run(struct addrinfo * dest, int runs) {
 		if (clock_gettime(CLOCK_MONOTONIC_RAW, &t1) != 0) {
 			perror("clock");
 		}
-#ifdef USE_TCP_FASTOPEN
-		r = sendto(sockfd, req, sizeof req, MSG_FASTOPEN, dest->ai_addr, dest->ai_addrlen);
-		if (r < 0) {
-			fprintf(stderr, "%s\n", strerror(errno));
-			close(sockfd);
-			exit(EXIT_FAILURE);
+
+		if (enable_fastopen) {
+			r = sendto(sockfd, req, sizeof req, MSG_FASTOPEN, dest->ai_addr, dest->ai_addrlen);
+			if (r < 0) {
+				fprintf(stderr, "%s\n", strerror(errno));
+				close(sockfd);
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			r = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
+			if (r < 0) {
+				fprintf(stderr, "%s\n", strerror(errno));
+				close(sockfd);
+				exit(EXIT_FAILURE);
+			}
+			write(sockfd, req, sizeof req);
 		}
-#else
-		r = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
-		if (r < 0) {
-			fprintf(stderr, "%s\n", strerror(errno));
-			close(sockfd);
-			exit(EXIT_FAILURE);
-		}
-		write(sockfd, req, sizeof req);
-#endif
 
 		r = read(sockfd, &buf, 1);
 
@@ -78,7 +78,7 @@ int do_run(struct addrinfo * dest, int runs) {
 		// printf("%s", buf);
 
 		if (!r) {
-			fprintf(stderr, "read error: %s\n", strerror(errno));
+			fprintf(stderr, "Read error: %s\n", strerror(errno));
 			printf("NaN\n");
 		} else {
 			timersub(t2, t1, delta);
@@ -90,19 +90,21 @@ int do_run(struct addrinfo * dest, int runs) {
 }
 
 
-
 int main(int argc, char *argv[]) {
 	struct addrinfo hints;
 	struct addrinfo *result;
-
+	time_t now = time(NULL);
 	int s, runs;
 
-	printf(req);
-
-	if (argc < 4) {
+	if (argc <= 3) {
 	   fprintf(stderr, "Usage: %s <host> <port> <runs>\n", argv[0]);
+	   fprintf(stderr, "If environment variable USE_FASTOPEN is set, TCP Fast Open (TFO) is used for connections.\n");
+	   fprintf(stderr, "\n");
 	   exit(EXIT_FAILURE);
 	}
+
+	char hostname[255];
+	gethostname((char *)&hostname, sizeof(hostname));
 
 	runs = atoi(argv[3]);
 
@@ -116,8 +118,16 @@ int main(int argc, char *argv[]) {
 	   exit(EXIT_FAILURE);
 	}
 
+	int enable_fastopen = 0;
+	if (getenv("USE_FASTOPEN")) {
+		enable_fastopen = atoi(getenv("USE_FASTOPEN")) > 0;
+	}
+
+    printf("# \"USE_FASTOPEN=%i %s %s %s %s\" ran on %s at %s",
+			enable_fastopen, argv[0], argv[1], argv[2], argv[3], hostname, asctime(localtime(&now)));
+
 	// use the first result returned by getaddrinfo.
-	do_run(result, runs);
+	do_run(result, runs, enable_fastopen);
 
 	freeaddrinfo(result);
 	return(EXIT_SUCCESS);
