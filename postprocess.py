@@ -7,7 +7,7 @@ import datetime
 import numpy as np
 from glob import glob
 
-#import scipy.stats
+from pprint import pprint
 
 def reject_outliers(data, m = 2.):
     d = np.abs(data - np.median(data))
@@ -15,43 +15,36 @@ def reject_outliers(data, m = 2.):
     s = d/mdev if mdev else 0
     return data[s<m]
 
-def oneline(data):
+def print_report(data):
     print "mean: %7.3fμs (stdev %6.3fμs) median: %7.3fμs" % \
         (data.mean() * 1000.*1000,
         data.std() * 1000.*1000,
         np.median(data)*1000*1000)
 
-def run_dataset(inputfile):
-    data = np.loadtxt(dataset, delimiter='\n')
-    data = reject_outliers(data)
-    oneline(data)
-
-    return data
-
-    #_t, _p = scipy.stats.wilcoxon(data1, data2)
-    #print "p-value: %f" % _p
-
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print "Usage: %s <dataset> [datasetN]" % sys.argv[0]
-        print "   Partial dataset names (tabcomplete) will be expanded."
+    if len(sys.argv) > 1:
+        print "Usage: %s < dataset" % sys.argv[0]
         sys.exit(255)
 
-    inputfile = sys.argv[1]
-    if inputfile.endswith("."):
-        inputfile = inputfile[:-1]
+    # "USE_FASTOPEN=0 ./httpttfb localhost 6081 10" ran on immer at Tue Apr 29 13:26:09 2014
+    header = sys.stdin.readline()
 
-    ran_at = os.stat(glob(inputfile + "*")[0]).st_mtime
-    ran_at = datetime.datetime.fromtimestamp(ran_at)
+    _, cmd, remainder = header.split("\"", 2)
 
-    runname = inputfile.split(".", 2)[1].split("__")
-    print "%s:%s (%s on %s)" % (runname[0], runname[1], ran_at, os.uname()[1])
-    print "-----"*10
-    print
+    cmd = cmd.split()
+    remainder = remainder.split()
 
-    for dataset in glob(inputfile + ".?"):
-        run_dataset(inputfile)
+    ran_on = remainder[2]
+    ran_at = datetime.datetime.strptime(" ".join(remainder[-5:]), "%a %b %d %H:%M:%S %Y")
 
-    print
+    s = "%s:%s (%s on %s)" % (cmd[2], cmd[3], ran_at, ran_on)
+    print s
+    print "-"*len(s)
+
+    data = np.loadtxt(sys.stdin, delimiter='\n')
+    data = reject_outliers(data)
+
+    print_report(data)
+#    print
 
